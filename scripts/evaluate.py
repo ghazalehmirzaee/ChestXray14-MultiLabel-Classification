@@ -2,7 +2,6 @@ import argparse
 import torch
 import wandb
 from tqdm import tqdm
-
 from data.dataset import get_data_loaders
 from models.efficient_net import EfficientNetModel
 from utils.metrics import calculate_metrics
@@ -53,4 +52,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
     evaluate(args)
 
-    
