@@ -17,7 +17,7 @@ class SimCLR(nn.Module):
         projected = self.projection_head(features)
         return F.normalize(projected, dim=1)
 
-    
+
 def simclr_loss(features, temperature=0.5):
     batch_size = features.shape[0] // 2
     labels = torch.cat([torch.arange(batch_size) for i in range(2)], dim=0)

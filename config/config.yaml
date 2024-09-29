@@ -41,4 +41,4 @@ training:
 
 wandb:
   project: "ChestXray14_MultiLabel_Classification"
-  entity: "ghazalehmirzaee"
+  entity: "mirzaeeghazal"

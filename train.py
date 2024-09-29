@@ -14,9 +14,13 @@ from data.augmentations import ACBA, get_transform
 from utils.loss import FWCELoss
 from utils.metrics import calculate_metrics
 import numpy as np
+import wandb
 
 
 def train_simclr(config):
+    # Initialize wandb
+    wandb.init(project=config['wandb']['project'], entity=config['wandb']['entity'], config=config)
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Initialize model
@@ -60,11 +64,14 @@ def train_simclr(config):
         avg_loss = total_loss / len(train_loader)
         wandb.log({"simclr_loss": avg_loss, "epoch": epoch})
 
-    # Save the pre-trained model
-    torch.save(model.backbone.state_dict(), "simclr_pretrained.pth")
+        # Save the pre-trained model
+        torch.save(model.backbone.state_dict(), "simclr_pretrained.pth")
 
+        # Finish the wandb run
+        wandb.finish()
 
 def train_classifiers(config):
+    wandb.init(project=config['wandb']['project'], entity=config['wandb']['entity'], config=config)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Initialize model
