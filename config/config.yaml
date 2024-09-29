@@ -1,3 +1,7 @@
+model:
+  efficientnet_version: "b0"
+  num_classes: 14
+
 data:
   train_dir: "/NewRaidData/ghazal/data/ChestX-ray14/categorized_images/train"
   val_dir: "/NewRaidData/ghazal/data/ChestX-ray14/categorized_images/val"
@@ -6,23 +10,19 @@ data:
   val_labels: "/NewRaidData/ghazal/data/ChestX-ray14/labels/val_list.txt"
   test_labels: "/NewRaidData/ghazal/data/ChestX-ray14/labels/test_list.txt"
 
-model:
-  num_classes: 14
-  efficientnet_version: "b0"
-
 training:
   batch_size: 32
   num_workers: 8
   lr: 1e-4
   weight_decay: 1e-5
-  epochs:
+#  epochs:
 #    pretraining: 200
 #    finetuning: 50
-  pretraining: 1
-  finetuning: 1
+  epochs:
+    pretraining: 1
+    finetuning: 1
   simclr_temperature: 0.5
 
 wandb:
   project: "ChestXray14_MultiLabel_Classification"
   entity: "ghazalehmirzaee"
-
