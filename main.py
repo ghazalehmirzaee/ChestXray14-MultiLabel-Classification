@@ -4,11 +4,20 @@ from train import train_simclr, train_classifiers
 from evaluate import evaluate_model
 from ablation_study import run_ablation_study
 
+def load_config(config_path):
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+
+    # Convert relevant string values to float
+    config['training']['lr'] = float(config['training']['lr'])
+    config['training']['weight_decay'] = float(config['training']['weight_decay'])
+    config['training']['simclr_temperature'] = float(config['training']['simclr_temperature'])
+
+    return config
+
 
 def main(args):
-    # Load configuration
-    with open(args.config, "r") as f:
-        config = yaml.safe_load(f)
+    config = load_config(args.config)
 
     if args.mode == "train":
         print("Starting SimCLR pre-training...")
@@ -33,4 +42,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main(args)
-

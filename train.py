@@ -58,7 +58,7 @@ def train_simclr(config):
 
         # Save the pre-trained model
     torch.save(model.backbone.state_dict(), "simclr_pretrained.pth")
-    
+
 
 def train_classifiers(config):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
