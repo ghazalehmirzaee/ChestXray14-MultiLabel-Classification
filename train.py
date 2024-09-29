@@ -20,7 +20,7 @@ def train_simclr(config):
     wandb.init(project=config['wandb']['project'], entity=config['wandb']['entity'], config=config)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+    
     # Initialize model
     backbone = EfficientNetWithAttention(config['model']['efficientnet_version'])
     model = SimCLR(backbone).to(device)
@@ -72,6 +72,8 @@ def train_classifiers(config):
     # Initialize model
     backbone = EfficientNetWithAttention(config['model']['efficientnet_version'])
     backbone.load_state_dict(torch.load("simclr_pretrained.pth"))
+    backbone = backbone.to(device)  # Move backbone to GPU
+
     classifiers = EnsembleBinaryClassifiers(backbone.num_features, config['model']['num_classes']).to(device)
     correlation_module = CorrelationLearningModule(config['model']['num_classes']).to(device)
     meta_learner = MetaLearner(config['model']['num_classes'], hidden_dim=64,
