@@ -1,25 +1,25 @@
 import torch
 import torch.nn as nn
 
-class MultiLabelClassifier(nn.Module):
-    def __init__(self, num_classes, pearson_matrix, bio_matrix, use_correlation_learning=True):
-        super(MultiLabelClassifier, self).__init__()
-        self.backbone = EfficientNetAttention(num_classes)
-        self.use_correlation_learning = use_correlation_learning
-        if use_correlation_learning:
-            self.correlation_adjustment = DiseaseCorrelationAdjustment(num_classes, pearson_matrix, bio_matrix)
-        self.meta_learner = FullMetaLearner(num_classes, hidden_dim=64, num_layers=2, num_heads=4,
-                                            num_classes=num_classes)
+class BinaryClassifier(nn.Module):
+    def __init__(self, input_dim):
+        super(BinaryClassifier, self).__init__()
+        self.classifier = nn.Sequential(
+            nn.Linear(input_dim, 256),
+            nn.ReLU(),
+            nn.Dropout(0.5),
+            nn.Linear(256, 1),
+            nn.Sigmoid()
+        )
 
     def forward(self, x):
-        initial_predictions, features = self.backbone(x)
+        return self.classifier(x)
 
-        if self.use_correlation_learning:
-            correlation_adjusted = self.correlation_adjustment(initial_predictions)
-        else:
-            correlation_adjusted = initial_predictions
+class EnsembleBinaryClassifiers(nn.Module):
+    def __init__(self, input_dim, num_classes):
+        super(EnsembleBinaryClassifiers, self).__init__()
+        self.classifiers = nn.ModuleList([BinaryClassifier(input_dim) for _ in range(num_classes)])
 
-        final_predictions = self.meta_learner(correlation_adjusted)
-
-        return final_predictions, features
+    def forward(self, x):
+        return torch.cat([classifier(x) for classifier in self.classifiers], dim=1)
 

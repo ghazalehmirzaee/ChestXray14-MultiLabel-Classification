@@ -16,8 +16,8 @@ class FWCELoss(nn.Module):
         total_samples = sum(class_frequencies.values())
         weights = {cls: total_samples / (freq + 1e-5) for cls, freq in class_frequencies.items()}
         max_weight = max(weights.values())
-        normalized_weights = {cls: weight / max_weight for cls, weight in weights.items()}
-        return torch.tensor([normalized_weights[i] for i in range(len(class_frequencies))])
+        normalized_weights = torch.tensor([weights[i] / max_weight for i in range(len(class_frequencies))])
+        return normalized_weights
 
     def forward(self, inputs, targets, model_params):
         BCE_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction='none')
@@ -36,11 +36,3 @@ class FWCELoss(nn.Module):
         loss += self.lambda1 * l1_reg + self.lambda2 * l2_reg
 
         return loss
-
-# Usage example:
-# class_frequencies = {0: 1000, 1: 500, ...}  # Example frequencies for each class
-# criterion = FWCELoss(class_frequencies)
-# outputs = torch.randn(32, 14)  # Example outputs (logits) from the model
-# targets = torch.randint(0, 2, (32, 14)).float()  # Example binary targets
-# model_params = model.parameters()  # Get model parameters for regularization
-# loss = criterion(outputs, targets, model_params)

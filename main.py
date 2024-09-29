@@ -1,0 +1,36 @@
+import argparse
+import yaml
+from train import train_simclr, train_classifiers
+from evaluate import evaluate_model
+from ablation_study import run_ablation_study
+
+
+def main(args):
+    # Load configuration
+    with open(args.config, "r") as f:
+        config = yaml.safe_load(f)
+
+    if args.mode == "train":
+        print("Starting SimCLR pre-training...")
+        train_simclr(config)
+        print("Starting classifier training...")
+        train_classifiers(config)
+    elif args.mode == "evaluate":
+        print("Evaluating model...")
+        evaluate_model(config)
+    elif args.mode == "ablation":
+        print("Running ablation study...")
+        run_ablation_study(config)
+    else:
+        print(f"Invalid mode: {args.mode}")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="ChestX-ray14 Multi-Label Classification")
+    parser.add_argument("--config", type=str, default="config/config.yaml", help="Path to configuration file")
+    parser.add_argument("--mode", type=str, choices=["train", "evaluate", "ablation"], required=True,
+                        help="Mode of operation")
+    args = parser.parse_args()
+
+    main(args)
+
