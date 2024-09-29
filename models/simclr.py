@@ -7,13 +7,13 @@ class SimCLR(nn.Module):
         super(SimCLR, self).__init__()
         self.backbone = backbone
         self.projection_head = nn.Sequential(
-            nn.Linear(backbone.num_features, backbone.num_features),
+            nn.Linear(self.backbone.num_features, self.backbone.num_features),
             nn.ReLU(),
-            nn.Linear(backbone.num_features, feature_dim)
+            nn.Linear(self.backbone.num_features, feature_dim)
         )
 
     def forward(self, x):
-        features = self.backbone(x)
+        features, _ = self.backbone(x)
         projected = self.projection_head(features)
         return F.normalize(projected, dim=1)
 

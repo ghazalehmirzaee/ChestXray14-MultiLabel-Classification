@@ -2,14 +2,21 @@ import torch
 import torch.nn as nn
 from efficientnet_pytorch import EfficientNet
 
-class EfficientNetBackbone(nn.Module):
-    def __init__(self, version='b0', pretrained=True):
-        super(EfficientNetBackbone, self).__init__()
+class EfficientNetWithAttention(nn.Module):
+    def __init__(self, version='b0', num_classes=14, pretrained=True):
+        super(EfficientNetWithAttention, self).__init__()
         self.efficientnet = EfficientNet.from_pretrained(f'efficientnet-{version}') if pretrained else EfficientNet.from_name(f'efficientnet-{version}')
-        self.num_features = self.efficientnet._fc.in_features
+        self.num_features = self.efficientnet._fc.in_features  # Add this line
+        self.attention = SEBlock(self.num_features)
+        self.global_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc = nn.Linear(self.num_features, num_classes)
 
     def forward(self, x):
-        return self.efficientnet.extract_features(x)
+        features = self.efficientnet.extract_features(x)
+        attended_features = self.attention(features)
+        pooled_features = self.global_pool(attended_features).view(x.size(0), -1)
+        output = self.fc(pooled_features)
+        return output, pooled_features
 
 class SEBlock(nn.Module):
     def __init__(self, channel, reduction=16):
@@ -27,19 +34,4 @@ class SEBlock(nn.Module):
         y = self.avg_pool(x).view(b, c)
         y = self.fc(y).view(b, c, 1, 1)
         return x * y.expand_as(x)
-
-class EfficientNetWithAttention(nn.Module):
-    def __init__(self, version='b0', num_classes=14, pretrained=True):
-        super(EfficientNetWithAttention, self).__init__()
-        self.backbone = EfficientNetBackbone(version, pretrained)
-        self.attention = SEBlock(self.backbone.num_features)
-        self.global_pool = nn.AdaptiveAvgPool2d(1)
-        self.fc = nn.Linear(self.backbone.num_features, num_classes)
-
-    def forward(self, x):
-        features = self.backbone(x)
-        attended_features = self.attention(features)
-        pooled_features = self.global_pool(attended_features).view(x.size(0), -1)
-        output = self.fc(pooled_features)
-        return output, pooled_features
 

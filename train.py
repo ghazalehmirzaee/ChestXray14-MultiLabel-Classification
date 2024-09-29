@@ -56,9 +56,9 @@ def train_simclr(config):
         avg_loss = total_loss / len(train_loader)
         wandb.log({"simclr_loss": avg_loss, "epoch": epoch})
 
-    # Save the pre-trained model
-    torch.save(model.state_dict(), "simclr_pretrained.pth")
-
+        # Save the pre-trained model
+    torch.save(model.backbone.state_dict(), "simclr_pretrained.pth")
+    
 
 def train_classifiers(config):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
