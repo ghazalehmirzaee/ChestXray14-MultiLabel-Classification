@@ -16,10 +16,11 @@ def evaluate_model(config):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load model
-    backbone = EfficientNetWithAttention(config.model.efficientnet_version)
-    classifiers = EnsembleBinaryClassifiers(backbone.num_features, config.model.num_classes)
-    correlation_module = CorrelationLearningModule(config.model.num_classes)
-    meta_learner = MetaLearner(config.model.num_classes, hidden_dim=64, num_classes=config.model.num_classes)
+    backbone = EfficientNetWithAttention(config['model']['efficientnet_version'])
+    classifiers = EnsembleBinaryClassifiers(backbone.num_features, config['model']['num_classes'])
+    correlation_module = CorrelationLearningModule(config['model']['num_classes'])
+    meta_learner = MetaLearner(config['model']['num_classes'], hidden_dim=64,
+                               num_classes=config['model']['num_classes'])
 
     checkpoint = torch.load("best_model.pth")
     backbone.load_state_dict(checkpoint['backbone'])
@@ -34,8 +35,9 @@ def evaluate_model(config):
 
     # Prepare data
     test_transform = get_transform(is_train=False)
-    test_loader = get_dataloader(config.data.test_dir, config.data.test_labels, config.training.batch_size,
-                                 config.training.num_workers, test_transform, shuffle=False)
+    test_loader = get_dataloader(config['data']['test_dir'], config['data']['test_labels'],
+                                 config['training']['batch_size'], config['training']['num_workers'], test_transform,
+                                 shuffle=False)
 
     # Evaluation
     backbone.eval()
@@ -67,25 +69,25 @@ def evaluate_model(config):
 
     # Print results
     print("Overall Metrics:")
-    print(f"Micro F1: {metrics['micro_f1']:.4f}")
-    print(f"Macro F1: {metrics['macro_f1']:.4f}")
-    print(f"Weighted F1: {metrics['weighted_f1']:.4f}")
-    print(f"Mean AP: {metrics['mean_ap']:.4f}")
-    print(f"Subset Accuracy: {metrics['subset_accuracy']:.4f}")
-    print(f"Label Ranking Average Precision: {metrics['lrap']:.4f}")
+    print("Micro F1: {:.4f}".format(metrics['micro_f1']))
+    print("Macro F1: {:.4f}".format(metrics['macro_f1']))
+    print("Weighted F1: {:.4f}".format(metrics['weighted_f1']))
+    print("Mean AP: {:.4f}".format(metrics['mean_ap']))
+    print("Subset Accuracy: {:.4f}".format(metrics['subset_accuracy']))
+    print("Label Ranking Average Precision: {:.4f}".format(metrics['lrap']))
 
     print("\nPer-class Metrics:")
-    for i, disease in enumerate(config.model.disease_names):
-        print(f"{disease}:")
-        print(f"  AUC-ROC: {metrics['auc_roc'][i]:.4f}")
-        print(f"  AP: {metrics['ap'][i]:.4f}")
-        print(f"  F1: {metrics['f1'][i]:.4f}")
+    for i, disease in enumerate(config['model']['disease_names']):
+        print("{}:".format(disease))
+        print("  AUC-ROC: {:.4f}".format(metrics['auc_roc'][i]))
+        print("  AP: {:.4f}".format(metrics['ap'][i]))
+        print("  F1: {:.4f}".format(metrics['f1'][i]))
 
     # Plot confusion matrices
-    for i, disease in enumerate(config.model.disease_names):
+    for i, disease in enumerate(config['model']['disease_names']):
         cm = metrics['cm_per_class'][i]
         plt = plot_confusion_matrix(cm, ['Negative', 'Positive'])
-        plt.savefig(f"confusion_matrix_{disease}.png")
+        plt.savefig("confusion_matrix_{}.png".format(disease))
         plt.close()
 
     # Generate GradCAM visualizations
@@ -93,21 +95,19 @@ def evaluate_model(config):
         if i >= 5:  # Generate for first 5 images
             break
         image = image.to(device)
-        for j, disease in enumerate(config.model.disease_names):
+        for j, disease in enumerate(config['model']['disease_names']):
             if label[0, j] == 1:
                 heatmap = generate_gradcam(backbone, image, j)
                 plt = plot_gradcam(image[0].cpu().numpy().transpose(1, 2, 0), heatmap)
-                plt.savefig(f"gradcam_{i}_{disease}.png")
+                plt.savefig("gradcam_{}_{}.png".format(i, disease))
                 plt.close()
 
 
 if __name__ == "__main__":
     import yaml
-    from argparse import Namespace
 
     with open("config/config.yaml", "r") as f:
         config = yaml.safe_load(f)
-    config = Namespace(**config)
 
     evaluate_model(config)
 

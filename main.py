@@ -22,7 +22,7 @@ def main(args):
         print("Running ablation study...")
         run_ablation_study(config)
     else:
-        print(f"Invalid mode: {args.mode}")
+        print("Invalid mode: {}".format(args.mode))
 
 
 if __name__ == "__main__":

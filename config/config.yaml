@@ -1,6 +1,22 @@
 model:
   efficientnet_version: "b0"
   num_classes: 14
+  use_correlation: true
+  disease_names:
+    - "Atelectasis"
+    - "Cardiomegaly"
+    - "Effusion"
+    - "Infiltration"
+    - "Mass"
+    - "Nodule"
+    - "Pneumonia"
+    - "Pneumothorax"
+    - "Consolidation"
+    - "Edema"
+    - "Emphysema"
+    - "Fibrosis"
+    - "Pleural_Thickening"
+    - "Hernia"
 
 data:
   train_dir: "/NewRaidData/ghazal/data/ChestX-ray14/categorized_images/train"
@@ -26,3 +42,4 @@ training:
 wandb:
   project: "ChestXray14_MultiLabel_Classification"
   entity: "ghazalehmirzaee"
+

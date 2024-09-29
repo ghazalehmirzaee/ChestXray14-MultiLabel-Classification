@@ -15,56 +15,58 @@ from train import train_classifiers
 def run_ablation_study(config):
     # Model A: Without correlation learning
     print("Training Model A (Without Correlation Learning)")
-    config.model.use_correlation = False
+    config['model']['use_correlation'] = False
     train_classifiers(config)
     metrics_a = evaluate_model(config, "model_a.pth")
 
     # Model B: With correlation learning
     print("Training Model B (With Correlation Learning)")
-    config.model.use_correlation = True
+    config['model']['use_correlation'] = True
     train_classifiers(config)
     metrics_b = evaluate_model(config, "model_b.pth")
 
     # Compare results
-    compare_metrics(metrics_a, metrics_b, config.model.disease_names)
+    compare_metrics(metrics_a, metrics_b, config['model']['disease_names'])
 
 
 def evaluate_model(config, model_path):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Load model
-    backbone = EfficientNetWithAttention(config.model.efficientnet_version)
-    classifiers = EnsembleBinaryClassifiers(backbone.num_features, config.model.num_classes)
+    backbone = EfficientNetWithAttention(config['model']['efficientnet_version'])
+    classifiers = EnsembleBinaryClassifiers(backbone.num_features, config['model']['num_classes'])
 
-    if config.model.use_correlation:
-        correlation_module = CorrelationLearningModule(config.model.num_classes)
-        meta_learner = MetaLearner(config.model.num_classes, hidden_dim=64, num_classes=config.model.num_classes)
+    if config['model']['use_correlation']:
+        correlation_module = CorrelationLearningModule(config['model']['num_classes'])
+        meta_learner = MetaLearner(config['model']['num_classes'], hidden_dim=64,
+                                   num_classes=config['model']['num_classes'])
 
     checkpoint = torch.load(model_path)
     backbone.load_state_dict(checkpoint['backbone'])
     classifiers.load_state_dict(checkpoint['classifiers'])
 
-    if config.model.use_correlation:
+    if config['model']['use_correlation']:
         correlation_module.load_state_dict(checkpoint['correlation_module'])
         meta_learner.load_state_dict(checkpoint['meta_learner'])
 
     backbone.to(device)
     classifiers.to(device)
 
-    if config.model.use_correlation:
+    if config['model']['use_correlation']:
         correlation_module.to(device)
         meta_learner.to(device)
 
     # Prepare data
     test_transform = get_transform(is_train=False)
-    test_loader = get_dataloader(config.data.test_dir, config.data.test_labels, config.training.batch_size,
-                                 config.training.num_workers, test_transform, shuffle=False)
+    test_loader = get_dataloader(config['data']['test_dir'], config['data']['test_labels'],
+                                 config['training']['batch_size'], config['training']['num_workers'], test_transform,
+                                 shuffle=False)
 
     # Evaluation
     backbone.eval()
     classifiers.eval()
 
-    if config.model.use_correlation:
+    if config['model']['use_correlation']:
         correlation_module.eval()
         meta_learner.eval()
 
@@ -79,7 +81,7 @@ def evaluate_model(config, model_path):
             features = backbone(images)
             initial_predictions = classifiers(features)
 
-            if config.model.use_correlation:
+            if config['model']['use_correlation']:
                 correlation_adjusted = correlation_module(initial_predictions)
                 final_predictions = meta_learner(correlation_adjusted)
             else:
@@ -100,28 +102,27 @@ def compare_metrics(metrics_a, metrics_b, disease_names):
     print("Model B: With Correlation Learning")
     print("\nOverall Metrics:")
     for metric in ['micro_f1', 'macro_f1', 'weighted_f1', 'mean_ap', 'subset_accuracy', 'lrap']:
-        print(f"{metric}:")
-        print(f"  Model A: {metrics_a[metric]:.4f}")
-        print(f"  Model B: {metrics_b[metric]:.4f}")
-        print(f"  Improvement: {(metrics_b[metric] - metrics_a[metric]) / metrics_a[metric] * 100:.2f}%")
+        print("{}:".format(metric))
+        print("  Model A: {:.4f}".format(metrics_a[metric]))
+        print("  Model B: {:.4f}".format(metrics_b[metric]))
+        print("  Improvement: {:.2f}%".format((metrics_b[metric] - metrics_a[metric]) / metrics_a[metric] * 100))
 
     print("\nPer-class Metrics:")
     for i, disease in enumerate(disease_names):
-        print(f"\n{disease}:")
+        print("\n{}:".format(disease))
         for metric in ['auc_roc', 'ap', 'f1']:
-            print(f"  {metric}:")
-            print(f"    Model A: {metrics_a[metric][i]:.4f}")
-            print(f"    Model B: {metrics_b[metric][i]:.4f}")
-            print(f"    Improvement: {(metrics_b[metric][i] - metrics_a[metric][i]) / metrics_a[metric][i] * 100:.2f}%")
+            print("  {}:".format(metric))
+            print("    Model A: {:.4f}".format(metrics_a[metric][i]))
+            print("    Model B: {:.4f}".format(metrics_b[metric][i]))
+            print("    Improvement: {:.2f}%".format(
+                (metrics_b[metric][i] - metrics_a[metric][i]) / metrics_a[metric][i] * 100))
 
 
 if __name__ == "__main__":
     import yaml
-    from argparse import Namespace
 
     with open("config/config.yaml", "r") as f:
         config = yaml.safe_load(f)
-    config = Namespace(**config)
 
     run_ablation_study(config)
 
