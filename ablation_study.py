@@ -9,7 +9,7 @@ from models.meta_learner import MetaLearner
 from data.dataset import get_dataloader
 from data.augmentations import get_transform
 from utils.metrics import calculate_metrics
-from train_augmented import train_classifiers
+from train import train_classifiers
 
 
 def run_ablation_study(config):
