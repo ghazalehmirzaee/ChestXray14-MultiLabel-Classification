@@ -1,6 +1,7 @@
 import torch
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
+from torch.utils.data import DataLoader  # Add this line
 from tqdm import tqdm
 import wandb
 from models.efficientnet import EfficientNetWithAttention
@@ -8,10 +9,11 @@ from models.simclr import SimCLR, simclr_loss
 from models.binary_classifiers import EnsembleBinaryClassifiers
 from models.correlation_learning import CorrelationLearningModule
 from models.meta_learner import MetaLearner
-from data.dataset import get_dataloader
+from data.dataset import get_dataloader, ChestXrayDataset
 from data.augmentations import ACBA, get_transform
 from utils.loss import FWCELoss
 from utils.metrics import calculate_metrics
+import numpy as np
 
 
 def train_simclr(config):
@@ -28,9 +30,11 @@ def train_simclr(config):
 
     # Initialize data loaders
     acba = ACBA()
-    train_transform = get_transform(is_train=True, acba=acba)
-    train_loader = get_dataloader(config['data']['train_dir'], config['data']['train_labels'],
-                                  config['training']['batch_size'], config['training']['num_workers'], train_transform)
+    train_transform = get_transform(is_train=True)
+    train_dataset = ChestXrayDataset(config['data']['train_dir'], config['data']['train_labels'],
+                                     transform=train_transform, acba=acba)
+    train_loader = DataLoader(train_dataset, batch_size=config['training']['batch_size'], shuffle=True,
+                              num_workers=config['training']['num_workers'])
 
     # Training loop
     for epoch in range(config['training']['epochs']['pretraining']):
@@ -56,7 +60,7 @@ def train_simclr(config):
         avg_loss = total_loss / len(train_loader)
         wandb.log({"simclr_loss": avg_loss, "epoch": epoch})
 
-        # Save the pre-trained model
+    # Save the pre-trained model
     torch.save(model.backbone.state_dict(), "simclr_pretrained.pth")
 
 
@@ -168,8 +172,8 @@ def evaluate(backbone, classifiers, correlation_module, meta_learner, criterion,
             all_predictions.append(final_predictions.cpu().numpy())
             all_labels.append(labels.cpu().numpy())
 
-    all_predictions = torch.cat(all_predictions)
-    all_labels = torch.cat(all_labels)
+    all_predictions = np.concatenate(all_predictions)
+    all_labels = np.concatenate(all_labels)
 
     metrics = calculate_metrics(all_labels, (all_predictions > 0.5).int(), all_predictions)
 

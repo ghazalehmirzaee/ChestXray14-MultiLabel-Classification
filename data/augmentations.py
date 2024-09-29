@@ -10,29 +10,28 @@ class ACBA:
         self.alpha = alpha
         self.beta = beta
         self.af_max = af_max
+        self.augmentation_factors = None
+        self.co_occurrence_matrix = None
+
+    def initialize(self, labels):
+        class_frequencies = {i: labels[:, i].sum() for i in range(labels.shape[1])}
+        self.augmentation_factors = self.calculate_augmentation_factor(class_frequencies)
+        self.co_occurrence_matrix = self.calculate_co_occurrence_matrix(labels)
 
     def calculate_augmentation_factor(self, class_frequencies):
         max_freq = max(class_frequencies.values())
         return {cls: min(1 + self.alpha * (max_freq / freq - 1), self.af_max)
                 for cls, freq in class_frequencies.items()}
 
-    def calculate_co_occurrence_adjustment(self, labels, co_occurrence_matrix):
-        adjustment = 0
-        total_co_occurrences = np.sum(co_occurrence_matrix)
-        for i, label in enumerate(labels):
-            if label == 1:
-                adjustment += np.sum(co_occurrence_matrix[i]) / total_co_occurrences
-        return adjustment
+    def calculate_co_occurrence_matrix(self, labels):
+        return np.dot(labels.T, labels)
 
-    def should_augment(self, labels):
-        return np.random.rand() < self.beta and np.sum(labels) > 0
-
-    def apply_augmentations(self, image, labels, augmentation_factors, co_occurrence_matrix):
+    def apply_augmentations(self, image, labels):
         if not self.should_augment(labels):
             return image
 
-        co_occurrence_adjustment = self.calculate_co_occurrence_adjustment(labels, co_occurrence_matrix)
-        augmentation_multiplier = max(1, max([augmentation_factors[i] for i, label in enumerate(labels) if label == 1]) * (1 + co_occurrence_adjustment))
+        co_occurrence_adjustment = self.calculate_co_occurrence_adjustment(labels)
+        augmentation_multiplier = max(1, max([self.augmentation_factors[i] for i, label in enumerate(labels) if label == 1]) * (1 + co_occurrence_adjustment))
 
         augmentations = [
             transforms.RandomHorizontalFlip(),
@@ -52,6 +51,7 @@ class ACBA:
             image = aug(image)
 
         return image
+
 
     @staticmethod
     def apply_clahe(image):
@@ -116,11 +116,10 @@ class ACBA:
         image[y:y+cut_h, x:x+cut_w] = 0
         return Image.fromarray(image)
 
-def get_transform(is_train, acba=None):
+def get_transform(is_train):
     if is_train:
         return transforms.Compose([
             transforms.Resize((224, 224)),
-            transforms.Lambda(lambda x: acba.apply_augmentations(x) if acba else x),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
