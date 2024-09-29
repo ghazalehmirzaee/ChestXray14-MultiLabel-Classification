@@ -1,6 +1,6 @@
 import torch
-from torchvision import transforms
 import numpy as np
+from torchvision import transforms
 from PIL import Image, ImageEnhance, ImageFilter
 import cv2
 from scipy.ndimage import gaussian_filter, map_coordinates
@@ -25,6 +25,17 @@ class ACBA:
 
     def calculate_co_occurrence_matrix(self, labels):
         return np.dot(labels.T, labels)
+
+    def should_augment(self, labels):
+        return np.random.rand() < self.beta and np.sum(labels) > 0
+
+    def calculate_co_occurrence_adjustment(self, labels):
+        adjustment = 0
+        total_co_occurrences = np.sum(self.co_occurrence_matrix)
+        for i, label in enumerate(labels):
+            if label == 1:
+                adjustment += np.sum(self.co_occurrence_matrix[i]) / total_co_occurrences
+        return adjustment
 
     def apply_augmentations(self, image, labels):
         if not self.should_augment(labels):
@@ -51,7 +62,6 @@ class ACBA:
             image = aug(image)
 
         return image
-
 
     @staticmethod
     def apply_clahe(image):
@@ -115,6 +125,7 @@ class ACBA:
         image = np.array(image)
         image[y:y+cut_h, x:x+cut_w] = 0
         return Image.fromarray(image)
+
 
 def get_transform(is_train):
     if is_train:
