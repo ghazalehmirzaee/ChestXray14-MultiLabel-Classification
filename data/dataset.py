@@ -26,7 +26,7 @@ class ChestXrayDataset(Dataset):
             image = self.transform(image)
 
         return image, target
-    
+
 
 def get_dataloader(data_dir, label_file, batch_size, num_workers, transform, shuffle=True):
     dataset = ChestXrayDataset(data_dir, label_file, transform)

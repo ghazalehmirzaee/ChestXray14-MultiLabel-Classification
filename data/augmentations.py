@@ -1,9 +1,10 @@
 import torch
 import numpy as np
 from torchvision import transforms
-from PIL import Image, ImageEnhance, ImageFilter
+from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 import cv2
 from scipy.ndimage import gaussian_filter, map_coordinates
+
 
 class ACBA:
     def __init__(self, alpha=0.5, beta=0.7, af_max=60):
@@ -52,7 +53,8 @@ class ACBA:
             self.apply_gaussian_blur,
             self.apply_elastic_transform,
             self.apply_random_erasing,
-            self.apply_cutout
+            self.apply_cutout,
+            self.apply_solarization  # Add solarization to the list of augmentations
         ]
 
         num_augmentations = min(int(augmentation_multiplier), len(augmentations))
@@ -140,6 +142,18 @@ class ACBA:
         image[y:y+cut_h, x:x+cut_w] = 0
         return Image.fromarray(image)
 
+    @staticmethod
+    def apply_solarization(image):
+        # Convert PIL Image to numpy array
+        img_array = np.array(image)
+
+        # Apply solarization
+        solarized = np.where(img_array < 128, img_array, 255 - img_array)
+
+        # Convert back to PIL Image
+        return Image.fromarray(solarized.astype(np.uint8))
+
+
 def get_transform(is_train):
     if is_train:
         return transforms.Compose([
@@ -154,51 +168,5 @@ def get_transform(is_train):
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
-
-
-import os
-import numpy as np
-from PIL import Image
-import pandas as pd
-
-
-def apply_acba_to_dataset(data_dir, label_file, output_dir, acba):
-    # Load labels
-    labels = pd.read_csv(label_file, sep=' ', header=None)
-    image_files = labels.iloc[:, 0].values
-    targets = labels.iloc[:, 1:].values.astype(np.float32)
-
-    # Initialize ACBA
-    acba.initialize(targets)
-
-    # Create output directory if it doesn't exist
-    os.makedirs(output_dir, exist_ok=True)
-
-    # Apply ACBA to each image
-    for idx, (img_file, target) in enumerate(zip(image_files, targets)):
-        img_path = os.path.join(data_dir, img_file)
-        image = Image.open(img_path).convert('RGB')
-
-        # Apply ACBA
-        augmented_image = acba.apply_augmentations(image, target)
-
-        # Save augmented image
-        output_path = os.path.join(output_dir, f"augmented_{img_file}")
-        augmented_image.save(output_path)
-
-        if idx % 1000 == 0:
-            print(f"Processed {idx} images")
-
-    print("ACBA augmentation completed")
-
-    # Create new label file for augmented images
-    new_label_file = os.path.join(output_dir, "augmented_labels.txt")
-    with open(new_label_file, 'w') as f:
-        for idx, (img_file, target) in enumerate(zip(image_files, targets)):
-            new_line = f"augmented_{img_file} " + " ".join(map(str, target.astype(int)))
-            f.write(new_line + "\n")
-
-    return new_label_file
-
 
 

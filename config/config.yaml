@@ -19,6 +19,9 @@ model:
     - "Hernia"
 
 data:
+  data:
+#  train_dir: "/NewRaidData/ghazal/data/ChestX-ray14/augmented_dataset"
+#  train_labels: "/NewRaidData/ghazal/data/ChestX-ray14/augmented_dataset/augmented_labels.txt"
   train_dir: "/NewRaidData/ghazal/data/ChestX-ray14/categorized_images/train"
   val_dir: "/NewRaidData/ghazal/data/ChestX-ray14/categorized_images/val"
   test_dir: "/NewRaidData/ghazal/data/ChestX-ray14/categorized_images/test"
