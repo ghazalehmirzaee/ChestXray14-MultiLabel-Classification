@@ -1,6 +1,7 @@
 import torch
 import torch.optim as optim
 from torch.optim.lr_scheduler import CosineAnnealingWarmRestarts
+from torch.utils.data import DataLoader  # Add this line
 from tqdm import tqdm
 import wandb
 from models.efficientnet import EfficientNetWithAttention
@@ -8,18 +9,35 @@ from models.simclr import SimCLR, simclr_loss
 from models.binary_classifiers import EnsembleBinaryClassifiers
 from models.correlation_learning import CorrelationLearningModule
 from models.meta_learner import MetaLearner
-from data.dataset import get_dataloader
-from data.augmentations import get_transform
+from data.dataset import get_dataloader, ChestXrayDataset
+from data.augmentations import ACBA, get_transform
 from utils.loss import FWCELoss
 from utils.metrics import calculate_metrics
 import numpy as np
-
+import wandb
+from data.augmentations import ACBA, apply_acba_to_dataset
+import os
 
 
 def train_simclr(config):
+    # Initialize wandb
     wandb.init(project=config['wandb']['project'], entity=config['wandb']['entity'], config=config)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Apply ACBA to create augmented dataset
+    acba = ACBA()
+    augmented_train_dir = os.path.join(config['data']['train_dir'], "augmented")
+    augmented_train_labels = apply_acba_to_dataset(
+        config['data']['train_dir'],
+        config['data']['train_labels'],
+        augmented_train_dir,
+        acba
+    )
+
+    # Update config with augmented dataset paths
+    config['data']['augmented_train_dir'] = augmented_train_dir
+    config['data']['augmented_train_labels'] = augmented_train_labels
 
     # Initialize model
     backbone = EfficientNetWithAttention(config['model']['efficientnet_version'])
@@ -31,16 +49,19 @@ def train_simclr(config):
     scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
 
     # Initialize data loaders
+    acba = ACBA()
     train_transform = get_transform(is_train=True)
-    train_loader = get_dataloader(config['data']['train_dir'], config['data']['train_labels'],
-                                  config['training']['batch_size'], config['training']['num_workers'],
-                                  train_transform, is_train=True)
+    train_dataset = ChestXrayDataset(config['data']['train_dir'], config['data']['train_labels'],
+                                     transform=train_transform, acba=acba)
+    train_loader = DataLoader(train_dataset, batch_size=config['training']['batch_size'], shuffle=True,
+                              num_workers=config['training']['num_workers'])
 
     # Training loop
     for epoch in range(config['training']['epochs']['pretraining']):
         model.train()
         total_loss = 0
-        for batch in tqdm(train_loader, desc=f"Epoch {epoch + 1}/{config['training']['epochs']['pretraining']}"):
+        for batch in tqdm(train_loader,
+                          desc="Epoch {}/{}".format(epoch + 1, config['training']['epochs']['pretraining'])):
             images, _ = batch
             images = torch.cat([images, images], dim=0)  # Create two views
             images = images.to(device)
@@ -59,15 +80,20 @@ def train_simclr(config):
         avg_loss = total_loss / len(train_loader)
         wandb.log({"simclr_loss": avg_loss, "epoch": epoch})
 
-    # Save the pre-trained model
-    torch.save(model.backbone.state_dict(), "simclr_pretrained.pth")
-    wandb.finish()
+        # Save the pre-trained model
+        torch.save(model.backbone.state_dict(), "simclr_pretrained.pth")
 
+        # Finish the wandb run
+        wandb.finish()
 
 def train_classifiers(config):
     wandb.init(project=config['wandb']['project'], entity=config['wandb']['entity'], config=config)
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Use the augmented dataset created in train_simclr
+    train_transform = get_transform(is_train=True)
+    train_loader = get_dataloader(config['data']['augmented_train_dir'], config['data']['augmented_train_labels'],
+                                  config['training']['batch_size'], config['training']['num_workers'], train_transform)
 
     # Initialize model
     backbone = EfficientNetWithAttention(config['model']['efficientnet_version'])
@@ -87,14 +113,14 @@ def train_classifiers(config):
     criterion = FWCELoss(class_frequencies=get_class_frequencies(config['data']['train_labels']))
 
     # Initialize data loaders
-    train_transform = get_transform(is_train=True)
+    acba = ACBA()
+    train_transform = get_transform(is_train=True, acba=acba)
     train_loader = get_dataloader(config['data']['train_dir'], config['data']['train_labels'],
-                                  config['training']['batch_size'], config['training']['num_workers'],
-                                  train_transform, is_train=True)
+                                  config['training']['batch_size'], config['training']['num_workers'], train_transform)
     val_transform = get_transform(is_train=False)
     val_loader = get_dataloader(config['data']['val_dir'], config['data']['val_labels'],
-                                config['training']['batch_size'], config['training']['num_workers'],
-                                val_transform, is_train=False, shuffle=False)
+                                config['training']['batch_size'], config['training']['num_workers'], val_transform,
+                                shuffle=False)
 
     # Training loop
     best_val_loss = float('inf')
@@ -105,7 +131,8 @@ def train_classifiers(config):
         meta_learner.train()
 
         total_loss = 0
-        for batch in tqdm(train_loader, desc=f"Epoch {epoch + 1}/{config['training']['epochs']['finetuning']}"):
+        for batch in tqdm(train_loader,
+                          desc="Epoch {}/{}".format(epoch + 1, config['training']['epochs']['finetuning'])):
             images, labels = batch
             images, labels = images.to(device), labels.to(device)
 
@@ -137,16 +164,15 @@ def train_classifiers(config):
                 'meta_learner': meta_learner.state_dict()
             }, "best_model.pth")
 
-            # Log metrics
-            wandb.log({
-                "train_loss": total_loss / len(train_loader),
-                "val_loss": val_loss,
-                "val_auc_roc": np.mean(val_metrics['auc_roc']),
-                "val_mean_ap": val_metrics['mean_ap'],
-                "epoch": epoch
-            })
+        # Log metrics
+        wandb.log({
+            "train_loss": total_loss / len(train_loader),
+            "val_loss": val_loss,
+            "val_auc_roc": sum(val_metrics['auc_roc']) / len(val_metrics['auc_roc']),
+            "val_mean_ap": val_metrics['mean_ap'],
+            "epoch": epoch
+        })
 
-        wandb.finish()
 
 def evaluate(backbone, classifiers, correlation_module, meta_learner, criterion, dataloader, device):
     backbone.eval()
@@ -177,14 +203,16 @@ def evaluate(backbone, classifiers, correlation_module, meta_learner, criterion,
     all_predictions = np.concatenate(all_predictions)
     all_labels = np.concatenate(all_labels)
 
-    metrics = calculate_metrics(all_labels, (all_predictions > 0.5).astype(int), all_predictions)
+    metrics = calculate_metrics(all_labels, (all_predictions > 0.5).int(), all_predictions)
 
     return total_loss / len(dataloader), metrics
+
 
 def get_class_frequencies(label_file):
     import pandas as pd
     labels = pd.read_csv(label_file, sep=' ', header=None).iloc[:, 1:].values
     return {i: labels[:, i].sum() for i in range(labels.shape[1])}
+
 
 if __name__ == "__main__":
     import yaml
@@ -192,5 +220,8 @@ if __name__ == "__main__":
     with open("config/config.yaml", "r") as f:
         config = yaml.safe_load(f)
 
+    wandb.init(project=config['wandb']['project'], entity=config['wandb']['entity'])
+
     train_simclr(config)
     train_classifiers(config)
+

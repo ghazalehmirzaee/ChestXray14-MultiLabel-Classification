@@ -5,7 +5,6 @@ from PIL import Image, ImageEnhance, ImageFilter, ImageOps
 import cv2
 from scipy.ndimage import gaussian_filter, map_coordinates
 
-
 class ACBA:
     def __init__(self, alpha=0.5, beta=0.7, af_max=60):
         self.alpha = alpha
@@ -54,7 +53,7 @@ class ACBA:
             self.apply_elastic_transform,
             self.apply_random_erasing,
             self.apply_cutout,
-            self.apply_solarization  # Add solarization to the list of augmentations
+            self.apply_solarization
         ]
 
         num_augmentations = min(int(augmentation_multiplier), len(augmentations))
@@ -84,29 +83,20 @@ class ACBA:
     def apply_elastic_transform(image):
         image = np.array(image)
         shape = image.shape
-
-        # Ensure the image is 3D (height, width, channels)
         if len(shape) == 2:
             image = np.expand_dims(image, axis=2)
             shape = image.shape
-
         alpha = shape[1] * np.random.uniform(1, 3)
         sigma = shape[1] * 0.07
         random_state = np.random.RandomState(None)
-
         dx = gaussian_filter((random_state.rand(*shape[:2]) * 2 - 1), sigma) * alpha
         dy = gaussian_filter((random_state.rand(*shape[:2]) * 2 - 1), sigma) * alpha
-
         x, y = np.meshgrid(np.arange(shape[1]), np.arange(shape[0]))
         indices = np.reshape(y + dy, (-1, 1)), np.reshape(x + dx, (-1, 1))
-
         distorted_image = np.zeros_like(image)
         for c in range(shape[2]):
-            distorted_image[:, :, c] = map_coordinates(image[:, :, c], indices, order=1, mode='reflect').reshape(
-                shape[:2])
-
+            distorted_image[:, :, c] = map_coordinates(image[:, :, c], indices, order=1, mode='reflect').reshape(shape[:2])
         return Image.fromarray(distorted_image.squeeze())
-
 
     @staticmethod
     def apply_random_erasing(image):
@@ -144,15 +134,9 @@ class ACBA:
 
     @staticmethod
     def apply_solarization(image):
-        # Convert PIL Image to numpy array
         img_array = np.array(image)
-
-        # Apply solarization
         solarized = np.where(img_array < 128, img_array, 255 - img_array)
-
-        # Convert back to PIL Image
         return Image.fromarray(solarized.astype(np.uint8))
-
 
 def get_transform(is_train):
     if is_train:
@@ -168,5 +152,4 @@ def get_transform(is_train):
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
-
 

@@ -4,6 +4,7 @@ from train import train_simclr, train_classifiers
 from evaluate import evaluate_model
 from ablation_study import run_ablation_study
 
+
 def load_config(config_path):
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
