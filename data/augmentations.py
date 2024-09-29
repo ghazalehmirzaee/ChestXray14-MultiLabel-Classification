@@ -81,16 +81,30 @@ class ACBA:
     @staticmethod
     def apply_elastic_transform(image):
         image = np.array(image)
-        alpha = image.shape[1] * np.random.uniform(1, 3)
-        sigma = image.shape[1] * 0.07
+        shape = image.shape
+
+        # Ensure the image is 3D (height, width, channels)
+        if len(shape) == 2:
+            image = np.expand_dims(image, axis=2)
+            shape = image.shape
+
+        alpha = shape[1] * np.random.uniform(1, 3)
+        sigma = shape[1] * 0.07
         random_state = np.random.RandomState(None)
-        shape = image.shape[:2]
-        dx = gaussian_filter((random_state.rand(*shape) * 2 - 1), sigma) * alpha
-        dy = gaussian_filter((random_state.rand(*shape) * 2 - 1), sigma) * alpha
+
+        dx = gaussian_filter((random_state.rand(*shape[:2]) * 2 - 1), sigma) * alpha
+        dy = gaussian_filter((random_state.rand(*shape[:2]) * 2 - 1), sigma) * alpha
+
         x, y = np.meshgrid(np.arange(shape[1]), np.arange(shape[0]))
-        indices = np.reshape(y+dy, (-1, 1)), np.reshape(x+dx, (-1, 1))
-        distorted_image = map_coordinates(image, indices, order=1, mode='reflect')
-        return Image.fromarray(distorted_image.reshape(image.shape))
+        indices = np.reshape(y + dy, (-1, 1)), np.reshape(x + dx, (-1, 1))
+
+        distorted_image = np.zeros_like(image)
+        for c in range(shape[2]):
+            distorted_image[:, :, c] = map_coordinates(image[:, :, c], indices, order=1, mode='reflect').reshape(
+                shape[:2])
+
+        return Image.fromarray(distorted_image.squeeze())
+
 
     @staticmethod
     def apply_random_erasing(image):
