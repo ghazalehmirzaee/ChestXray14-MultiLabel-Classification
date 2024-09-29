@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
 class FWCELoss(nn.Module):
     def __init__(self, class_frequencies, alpha=0.25, gamma=2, lambda1=0.01, lambda2=0.01):
         super(FWCELoss, self).__init__()
@@ -20,6 +19,11 @@ class FWCELoss(nn.Module):
         return normalized_weights
 
     def forward(self, inputs, targets, model_params):
+        # Ensure inputs and targets are on the same device
+        device = inputs.device
+        targets = targets.to(device)
+        self.class_weights = self.class_weights.to(device)
+
         BCE_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction='none')
 
         pt = torch.exp(-BCE_loss)
@@ -36,3 +40,5 @@ class FWCELoss(nn.Module):
         loss += self.lambda1 * l1_reg + self.lambda2 * l2_reg
 
         return loss
+
+    
