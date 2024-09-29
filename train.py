@@ -15,6 +15,8 @@ from utils.loss import FWCELoss
 from utils.metrics import calculate_metrics
 import numpy as np
 import wandb
+from data.augmentations import ACBA, apply_acba_to_dataset
+import os
 
 
 def train_simclr(config):
@@ -22,6 +24,20 @@ def train_simclr(config):
     wandb.init(project=config['wandb']['project'], entity=config['wandb']['entity'], config=config)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Apply ACBA to create augmented dataset
+    acba = ACBA()
+    augmented_train_dir = os.path.join(config['data']['train_dir'], "augmented")
+    augmented_train_labels = apply_acba_to_dataset(
+        config['data']['train_dir'],
+        config['data']['train_labels'],
+        augmented_train_dir,
+        acba
+    )
+
+    # Update config with augmented dataset paths
+    config['data']['augmented_train_dir'] = augmented_train_dir
+    config['data']['augmented_train_labels'] = augmented_train_labels
 
     # Initialize model
     backbone = EfficientNetWithAttention(config['model']['efficientnet_version'])
@@ -73,6 +89,11 @@ def train_simclr(config):
 def train_classifiers(config):
     wandb.init(project=config['wandb']['project'], entity=config['wandb']['entity'], config=config)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    # Use the augmented dataset created in train_simclr
+    train_transform = get_transform(is_train=True)
+    train_loader = get_dataloader(config['data']['augmented_train_dir'], config['data']['augmented_train_labels'],
+                                  config['training']['batch_size'], config['training']['num_workers'], train_transform)
 
     # Initialize model
     backbone = EfficientNetWithAttention(config['model']['efficientnet_version'])
