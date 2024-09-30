@@ -34,12 +34,12 @@ training:
   num_workers: 8
   lr: 1e-4
   weight_decay: 1e-5
-#  epochs:
-#    pretraining: 200
-#    finetuning: 50
   epochs:
-    pretraining: 1
-    finetuning: 1
+    pretraining: 200
+    finetuning: 50
+#  epochs:
+#    pretraining: 1
+#    finetuning: 1
   simclr_temperature: 0.5
 
 wandb:

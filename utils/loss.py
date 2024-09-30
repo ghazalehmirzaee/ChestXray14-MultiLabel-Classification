@@ -41,4 +41,3 @@ class FWCELoss(nn.Module):
 
         return loss
 
-    
