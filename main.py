@@ -4,7 +4,6 @@ from train import train_simclr, train_classifiers
 from evaluate import evaluate_model
 from ablation_study import run_ablation_study
 
-
 def load_config(config_path):
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
@@ -16,30 +15,31 @@ def load_config(config_path):
 
     return config
 
-
 def main(args):
     config = load_config(args.config)
 
-    if args.mode == "pretrain":
+    if args.mode == "train_simclr":
         print("Starting SimCLR pre-training...")
         train_simclr(config)
-    elif args.mode == "train":
+    elif args.mode == "train_classifiers":
         print("Starting classifier training...")
-        train_classifiers(config)
+        train_classifiers(config, use_correlation=True)
+    elif args.mode == "train_classifiers_no_correlation":
+        print("Starting classifier training without correlation...")
+        train_classifiers(config, use_correlation=False)
     elif args.mode == "evaluate":
         print("Evaluating model...")
-        evaluate_model(config)
+        evaluate_model(config, "best_model_with_correlation.pth")
     elif args.mode == "ablation":
         print("Running ablation study...")
         run_ablation_study(config)
     else:
         print("Invalid mode: {}".format(args.mode))
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ChestX-ray14 Multi-Label Classification")
     parser.add_argument("--config", type=str, default="config/config.yaml", help="Path to configuration file")
-    parser.add_argument("--mode", type=str, choices=["train", "evaluate", "ablation"], required=True,
+    parser.add_argument("--mode", type=str, choices=["train_simclr", "train_classifiers", "train_classifiers_no_correlation", "evaluate", "ablation"], required=True,
                         help="Mode of operation")
     args = parser.parse_args()
 
