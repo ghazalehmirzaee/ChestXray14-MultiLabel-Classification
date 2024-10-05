@@ -14,6 +14,7 @@ from utils.loss import FWCELoss
 from utils.metrics import calculate_metrics
 from utils.training_utils import EarlyStopping
 import numpy as np
+import os
 
 
 def train_simclr(config):
@@ -109,7 +110,15 @@ def train_classifiers(config, use_correlation=True):
 
     # Initialize model
     backbone = EfficientNetWithAttention(config['model']['efficientnet_version'])
-    backbone.load_state_dict(torch.load("simclr_pretrained.pth"))
+
+    # Load the pretrained SimCLR model
+    pretrained_path = "simclr_pretrained.pth"
+    if os.path.exists(pretrained_path):
+        backbone.load_state_dict(torch.load(pretrained_path))
+        print(f"Loaded pretrained SimCLR model from {pretrained_path}")
+    else:
+        print(f"Pretrained SimCLR model not found at {pretrained_path}. Initializing from scratch.")
+
     backbone = backbone.to(device)
 
     classifiers = EnsembleBinaryClassifiers(backbone.num_features, config['model']['num_classes']).to(device)

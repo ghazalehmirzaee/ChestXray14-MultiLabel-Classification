@@ -18,22 +18,20 @@ def run_ablation_study(config):
     # Ensure the pretrained SimCLR model exists
     pretrained_path = "simclr_pretrained.pth"
     if not os.path.exists(pretrained_path):
-        raise FileNotFoundError(f"Pretrained SimCLR model not found at {pretrained_path}")
+        print(f"Warning: Pretrained SimCLR model not found at {pretrained_path}")
 
     # Model A: Without correlation learning
     print("Training Model A (Without Correlation Learning)")
-    wandb.init(project=config['wandb']['project'], entity=config['wandb']['entity'], name="Model_Without_Correlation",
-               config=config)
-    train_classifiers(config, use_correlation=False, pretrained_path=pretrained_path)
+    wandb.init(project=config['wandb']['project'], entity=config['wandb']['entity'], name="Model_Without_Correlation", config=config)
+    train_classifiers(config, use_correlation=False)
     metrics_a = evaluate_model(config, "best_model_without_correlation.pth", use_correlation=False)
     log_metrics(metrics_a, "Without_Correlation")
     wandb.finish()
 
     # Model B: With correlation learning
     print("Training Model B (With Correlation Learning)")
-    wandb.init(project=config['wandb']['project'], entity=config['wandb']['entity'], name="Model_With_Correlation",
-               config=config)
-    train_classifiers(config, use_correlation=True, pretrained_path=pretrained_path)
+    wandb.init(project=config['wandb']['project'], entity=config['wandb']['entity'], name="Model_With_Correlation", config=config)
+    train_classifiers(config, use_correlation=True)
     metrics_b = evaluate_model(config, "best_model_with_correlation.pth", use_correlation=True)
     log_metrics(metrics_b, "With_Correlation")
     wandb.finish()
