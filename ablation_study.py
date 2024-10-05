@@ -12,21 +12,15 @@ from data.dataset import get_dataloader
 from data.augmentations import get_transform
 from utils.metrics import calculate_metrics
 from train import train_classifiers
-import os
 
 
 def run_ablation_study(config):
-    # Ensure the pretrained SimCLR model exists
-    pretrained_path = "simclr_pretrained.pth"
-    if not os.path.exists(pretrained_path):
-        print(f"Warning: Pretrained SimCLR model not found at {pretrained_path}")
-
     # Model A: Without correlation learning
     print("Training Model A (Without Correlation Learning)")
     wandb.init(project=config['wandb']['project'], entity=config['wandb']['entity'], name="Model_Without_Correlation", config=config)
     train_classifiers(config, use_correlation=False)
     metrics_a = evaluate_model(config, "best_model_without_correlation.pth", use_correlation=False)
-    log_metrics(metrics_a, "Without_Correlation")
+    log_metrics(metrics_a, "Without_Correlation", config['model']['disease_names'])
     wandb.finish()
 
     # Model B: With correlation learning
@@ -34,7 +28,7 @@ def run_ablation_study(config):
     wandb.init(project=config['wandb']['project'], entity=config['wandb']['entity'], name="Model_With_Correlation", config=config)
     train_classifiers(config, use_correlation=True)
     metrics_b = evaluate_model(config, "best_model_with_correlation.pth", use_correlation=True)
-    log_metrics(metrics_b, "With_Correlation")
+    log_metrics(metrics_b, "With_Correlation", config['model']['disease_names'])
     wandb.finish()
 
     # Compare results
@@ -108,48 +102,54 @@ def evaluate_model(config, model_path, use_correlation):
     return calculate_metrics(all_labels, (all_predictions > 0.5).astype(int), all_predictions)
 
 
-def log_metrics(metrics, model_name):
+def log_metrics(metrics, model_name, disease_names):
+    if wandb.run is None:
+        print("WandB is not initialized. Skipping logging.")
+        return
+
     # Log overall metrics
-    wandb.log({f"{model_name}/overall_{k}": v for k, v in metrics.items() if not isinstance(v, list)})
+    wandb.log({f"{model_name}/overall_{k}": v for k, v in metrics['overall'].items()})
 
     # Log per-disease metrics
-    for i, disease in enumerate(config['model']['disease_names']):
+    for i, disease in enumerate(disease_names):
         wandb.log({
-            f"{model_name}/{disease}/AUC-ROC": metrics['auc_roc'][i],
-            f"{model_name}/{disease}/AP": metrics['ap'][i],
-            f"{model_name}/{disease}/F1": metrics['f1'][i],
-            f"{model_name}/{disease}/Specificity": metrics['specificity'][i],
-            f"{model_name}/{disease}/Sensitivity": metrics['sensitivity'][i],
-            f"{model_name}/{disease}/AUPRC": metrics['auprc'][i],
+            f"{model_name}/{disease}/AUC-ROC": metrics['per_disease']['auc_roc'][i],
+            f"{model_name}/{disease}/AP": metrics['per_disease']['ap'][i],
+            f"{model_name}/{disease}/F1": metrics['per_disease']['f1'][i],
+            f"{model_name}/{disease}/Specificity": metrics['per_disease']['specificity'][i],
+            f"{model_name}/{disease}/Sensitivity": metrics['per_disease']['sensitivity'][i],
+            f"{model_name}/{disease}/AUPRC": metrics['per_disease']['auprc'][i],
         })
 
         # Log confusion matrix as a table
-        cm = metrics['cm_per_class'][i]
+        cm = metrics['per_disease']['cm'][i]
         cm_table = wandb.Table(data=cm.tolist(), columns=["Predicted Negative", "Predicted Positive"])
         wandb.log({f"{model_name}/{disease}/Confusion_Matrix": cm_table})
-
+        
 
 def compare_metrics(metrics_a, metrics_b, disease_names):
     print("Ablation Study Results:")
     print("Model A: Without Correlation Learning")
     print("Model B: With Correlation Learning")
+
     print("\nOverall Metrics:")
-    for metric in ['micro_f1', 'macro_f1', 'weighted_f1', 'mean_ap', 'mean_auc_roc', 'mean_auprc']:
-        print("{}:".format(metric))
-        print("  Model A: {:.4f}".format(metrics_a[metric]))
-        print("  Model B: {:.4f}".format(metrics_b[metric]))
-        print("  Improvement: {:.2f}%".format((metrics_b[metric] - metrics_a[metric]) / metrics_a[metric] * 100))
+    for metric, value_a in metrics_a['overall'].items():
+        value_b = metrics_b['overall'][metric]
+        print(f"{metric}:")
+        print(f"  Model A: {value_a:.4f}")
+        print(f"  Model B: {value_b:.4f}")
+        print(f"  Improvement: {((value_b - value_a) / value_a * 100):.2f}%")
 
-    print("\nPer-class Metrics:")
+    print("\nPer-disease Metrics:")
     for i, disease in enumerate(disease_names):
-        print("\n{}:".format(disease))
+        print(f"\n{disease}:")
         for metric in ['auc_roc', 'ap', 'f1', 'specificity', 'sensitivity', 'auprc']:
-            print("  {}:".format(metric))
-            print("    Model A: {:.4f}".format(metrics_a[metric][i]))
-            print("    Model B: {:.4f}".format(metrics_b[metric][i]))
-            print("    Improvement: {:.2f}%".format(
-                (metrics_b[metric][i] - metrics_a[metric][i]) / metrics_a[metric][i] * 100))
-
+            value_a = metrics_a['per_disease'][metric][i]
+            value_b = metrics_b['per_disease'][metric][i]
+            print(f"  {metric}:")
+            print(f"    Model A: {value_a:.4f}")
+            print(f"    Model B: {value_b:.4f}")
+            print(f"    Improvement: {((value_b - value_a) / value_a * 100):.2f}%")
 
 
 if __name__ == "__main__":
@@ -162,3 +162,4 @@ if __name__ == "__main__":
     config['training']['simclr_temperature'] = float(config['training']['simclr_temperature'])
 
     run_ablation_study(config)
+
