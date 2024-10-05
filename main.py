@@ -20,9 +20,10 @@ def load_config(config_path):
 def main(args):
     config = load_config(args.config)
 
-    if args.mode == "train":
+    if args.mode == "pretrain":
         print("Starting SimCLR pre-training...")
         train_simclr(config)
+    elif args.mode == "train":
         print("Starting classifier training...")
         train_classifiers(config)
     elif args.mode == "evaluate":
