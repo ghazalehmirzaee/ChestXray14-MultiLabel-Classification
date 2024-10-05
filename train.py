@@ -135,7 +135,9 @@ def train_classifiers(config, use_correlation=True):
     params = list(backbone.parameters()) + list(classifiers.parameters())
     if use_correlation:
         params += list(correlation_module.parameters()) + list(meta_learner.parameters())
-    optimizer = optim.Adam(params, lr=config['training']['lr'], weight_decay=config['training']['weight_decay'])
+    lr = float(config['training']['lr'])
+    weight_decay = float(config['training']['weight_decay'])
+    optimizer = optim.Adam(params, lr=lr, weight_decay=weight_decay)
     scheduler = CosineAnnealingWarmRestarts(optimizer, T_0=10, T_mult=2)
 
     # Initialize loss function

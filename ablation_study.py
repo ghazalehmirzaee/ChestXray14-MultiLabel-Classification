@@ -12,7 +12,7 @@ from data.augmentations import get_transform
 from utils.metrics import calculate_metrics
 from train import train_classifiers
 import os
-
+from main import load_config
 
 def run_ablation_study(config):
     # Ensure the pretrained SimCLR model exists
@@ -150,11 +150,8 @@ def compare_metrics(metrics_a, metrics_b, disease_names):
                 (metrics_b[metric][i] - metrics_a[metric][i]) / metrics_a[metric][i] * 100))
 
 
+
 if __name__ == "__main__":
-    import yaml
-
-    with open("config/config.yaml", "r") as f:
-        config = yaml.safe_load(f)
-
+    config = load_config("config/config.yaml")
     run_ablation_study(config)
 
