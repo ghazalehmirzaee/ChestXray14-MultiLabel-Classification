@@ -199,8 +199,8 @@ def train_classifiers(config, use_correlation=True):
         wandb.log({
             "train_loss": total_loss / len(train_loader),
             "val_loss": val_loss,
-            "val_auc_roc": np.mean(val_metrics['auc_roc']),
-            "val_mean_ap": val_metrics['mean_ap'],
+            "val_auc_roc": np.mean(val_metrics['per_disease']['auc_roc']),
+            "val_mean_ap": np.mean(val_metrics['per_disease']['ap']),
             "epoch": epoch
         })
 

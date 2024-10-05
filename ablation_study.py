@@ -13,7 +13,6 @@ from data.augmentations import get_transform
 from utils.metrics import calculate_metrics
 from train import train_classifiers
 
-
 def run_ablation_study(config):
     # Model A: Without correlation learning
     print("Training Model A (Without Correlation Learning)")
@@ -125,7 +124,7 @@ def log_metrics(metrics, model_name, disease_names):
         cm = metrics['per_disease']['cm'][i]
         cm_table = wandb.Table(data=cm.tolist(), columns=["Predicted Negative", "Predicted Positive"])
         wandb.log({f"{model_name}/{disease}/Confusion_Matrix": cm_table})
-        
+
 
 def compare_metrics(metrics_a, metrics_b, disease_names):
     print("Ablation Study Results:")
