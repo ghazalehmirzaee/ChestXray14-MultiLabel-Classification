@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 import wandb
+import yaml
 from models.efficientnet import EfficientNetWithAttention
 from models.binary_classifiers import EnsembleBinaryClassifiers
 from models.correlation_learning import CorrelationLearningModule
@@ -12,7 +13,7 @@ from data.augmentations import get_transform
 from utils.metrics import calculate_metrics
 from train import train_classifiers
 import os
-from main import load_config
+
 
 def run_ablation_study(config):
     # Ensure the pretrained SimCLR model exists
@@ -152,6 +153,12 @@ def compare_metrics(metrics_a, metrics_b, disease_names):
 
 
 if __name__ == "__main__":
-    config = load_config("config/config.yaml")
-    run_ablation_study(config)
+    with open("config/config.yaml", "r") as f:
+        config = yaml.safe_load(f)
 
+    # Convert relevant string values to float
+    config['training']['lr'] = float(config['training']['lr'])
+    config['training']['weight_decay'] = float(config['training']['weight_decay'])
+    config['training']['simclr_temperature'] = float(config['training']['simclr_temperature'])
+
+    run_ablation_study(config)

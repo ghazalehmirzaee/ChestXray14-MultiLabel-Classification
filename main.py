@@ -15,6 +15,7 @@ def load_config(config_path):
 
     return config
 
+
 def main(args):
     config = load_config(args.config)
 
