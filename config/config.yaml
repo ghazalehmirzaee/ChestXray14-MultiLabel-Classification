@@ -35,9 +35,9 @@ training:
   lr: 1e-4
   weight_decay: 1e-5
   epochs:
-    pretraining: 1
-    finetuning: 1
-    
+    pretraining: 200
+    finetuning: 100
+  early_stopping_patience: 10
   simclr_temperature: 0.5
 
 wandb:
