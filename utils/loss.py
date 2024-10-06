@@ -19,24 +19,18 @@ class FWCELoss(nn.Module):
         return normalized_weights
 
     def forward(self, inputs, targets, model_params):
-        # Ensure inputs and targets are on the same device
         device = inputs.device
         targets = targets.to(device)
         self.class_weights = self.class_weights.to(device)
 
         BCE_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction='none')
-
         pt = torch.exp(-BCE_loss)
         focal_loss = self.alpha * (1 - pt) ** self.gamma * BCE_loss
-
         weighted_focal_loss = self.class_weights.unsqueeze(0) * focal_loss
-
         loss = weighted_focal_loss.mean()
 
-        # L1 and L2 regularization
         l1_reg = sum(p.abs().sum() for p in model_params)
         l2_reg = sum(p.pow(2.0).sum() for p in model_params)
-
         loss += self.lambda1 * l1_reg + self.lambda2 * l2_reg
 
         return loss

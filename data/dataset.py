@@ -6,7 +6,6 @@ from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 from data.augmentations import ACBA, get_transform
 
-
 """
 ### For loading augmented dataset when we saved augmented images
 
@@ -31,6 +30,7 @@ class ChestXrayDataset(Dataset):
 
         return image, target
 """
+
 
 
 class ChestXrayDataset(Dataset):
@@ -61,9 +61,8 @@ class ChestXrayDataset(Dataset):
 
         return image, target
 
-
 def get_dataloader(data_dir, label_file, batch_size, num_workers, transform, is_train=True, shuffle=True):
     acba = ACBA() if is_train else None
     dataset = ChestXrayDataset(data_dir, label_file, transform, acba)
-    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True)
 

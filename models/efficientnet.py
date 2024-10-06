@@ -6,7 +6,7 @@ class EfficientNetWithAttention(nn.Module):
     def __init__(self, version='b0', num_classes=14, pretrained=True):
         super(EfficientNetWithAttention, self).__init__()
         self.efficientnet = EfficientNet.from_pretrained(f'efficientnet-{version}') if pretrained else EfficientNet.from_name(f'efficientnet-{version}')
-        self.num_features = self.efficientnet._fc.in_features  # This should be 1280 for EfficientNet-B0
+        self.num_features = self.efficientnet._fc.in_features
         self.attention = SEBlock(self.num_features)
         self.global_pool = nn.AdaptiveAvgPool2d(1)
         self.fc = nn.Linear(self.num_features, num_classes)
@@ -15,13 +15,19 @@ class EfficientNetWithAttention(nn.Module):
         features = self.efficientnet.extract_features(x)
         attended_features = self.attention(features)
         pooled_features = self.global_pool(attended_features).view(x.size(0), -1)
-        output = self.fc(pooled_features)
-        return pooled_features  # Return only the pooled features for SimCLR
+        return pooled_features
 
     def forward_classifier(self, x):
         features = self.forward(x)
         return self.fc(features)
 
+    def freeze_backbone(self):
+        for param in self.efficientnet.parameters():
+            param.requires_grad = False
+
+    def unfreeze_backbone(self):
+        for param in self.efficientnet.parameters():
+            param.requires_grad = True
 
 class SEBlock(nn.Module):
     def __init__(self, channel, reduction=16):

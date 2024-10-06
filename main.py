@@ -1,6 +1,6 @@
 import argparse
 import yaml
-from train import train_simclr, train_classifiers
+from train_oldversion import train_simclr, train_classifiers
 from evaluate import evaluate_model
 from ablation_study import run_ablation_study
 
