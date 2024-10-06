@@ -70,8 +70,6 @@ def analyze_training_progress(loss_history, lr_history=None, window_length=11, p
 
     return analysis
 
-
-# Add this to your EarlyStopping class
 class EarlyStopping:
     def __init__(self, patience=7, verbose=False, delta=0, path='checkpoint.pt'):
         self.patience = patience
@@ -79,7 +77,7 @@ class EarlyStopping:
         self.counter = 0
         self.best_score = None
         self.early_stop = False
-        self.val_loss_min = np.Inf
+        self.val_loss_min = float('inf')
         self.delta = delta
         self.path = path
         self.loss_history = []
