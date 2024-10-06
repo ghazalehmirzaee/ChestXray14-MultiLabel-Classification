@@ -3,6 +3,9 @@ import yaml
 from train import train_simclr, train_classifiers
 from evaluate import evaluate_model
 from ablation_study import run_ablation_study
+import torch
+from torch.multiprocessing import spawn
+
 
 def load_config(config_path):
     with open(config_path, 'r') as f:
@@ -16,18 +19,23 @@ def load_config(config_path):
     return config
 
 
+from ablation_study import run_ablation_study
+
 def main(args):
     config = load_config(args.config)
 
     if args.mode == "train_simclr":
         print("Starting SimCLR pre-training...")
-        train_simclr(config)
+        world_size = torch.cuda.device_count()
+        spawn(train_simclr, args=(world_size, config), nprocs=world_size, join=True)
     elif args.mode == "train_classifiers":
         print("Starting classifier training...")
-        train_classifiers(config, use_correlation=True)
+        world_size = torch.cuda.device_count()
+        spawn(train_classifiers, args=(world_size, config, True), nprocs=world_size, join=True)
     elif args.mode == "train_classifiers_no_correlation":
         print("Starting classifier training without correlation...")
-        train_classifiers(config, use_correlation=False)
+        world_size = torch.cuda.device_count()
+        spawn(train_classifiers, args=(world_size, config, False), nprocs=world_size, join=True)
     elif args.mode == "evaluate":
         print("Evaluating model...")
         evaluate_model(config, "best_model_with_correlation.pth")
@@ -36,6 +44,7 @@ def main(args):
         run_ablation_study(config)
     else:
         print("Invalid mode: {}".format(args.mode))
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ChestX-ray14 Multi-Label Classification")

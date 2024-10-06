@@ -12,13 +12,15 @@ from data.dataset import get_dataloader
 from data.augmentations import get_transform
 from utils.metrics import calculate_metrics
 from train import train_classifiers
-
+from torch.multiprocessing import spawn
 
 def run_ablation_study(config):
+    world_size = torch.cuda.device_count()
+
     # Model A: Without correlation learning
     print("Training Model A (Without Correlation Learning)")
     wandb.init(project=config['wandb']['project'], entity=config['wandb']['entity'], name="Model_Without_Correlation", config=config)
-    train_classifiers(config, use_correlation=False)
+    spawn(train_classifiers, args=(world_size, config, False), nprocs=world_size, join=True)
     metrics_a = evaluate_model(config, "best_model_without_correlation.pth", use_correlation=False)
     log_metrics(metrics_a, "Without_Correlation", config['model']['disease_names'])
     wandb.finish()
@@ -26,13 +28,14 @@ def run_ablation_study(config):
     # Model B: With correlation learning
     print("Training Model B (With Correlation Learning)")
     wandb.init(project=config['wandb']['project'], entity=config['wandb']['entity'], name="Model_With_Correlation", config=config)
-    train_classifiers(config, use_correlation=True)
+    spawn(train_classifiers, args=(world_size, config, True), nprocs=world_size, join=True)
     metrics_b = evaluate_model(config, "best_model_with_correlation.pth", use_correlation=True)
     log_metrics(metrics_b, "With_Correlation", config['model']['disease_names'])
     wandb.finish()
 
     # Compare results
     compare_metrics(metrics_a, metrics_b, config['model']['disease_names'])
+
 
 
 def evaluate_model(config, model_path, use_correlation):
