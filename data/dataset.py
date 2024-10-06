@@ -61,8 +61,18 @@ class ChestXrayDataset(Dataset):
 
         return image, target
 
-def get_dataloader(data_dir, label_file, batch_size, num_workers, transform, is_train=True, shuffle=True):
+
+def get_dataloader(data_dir, label_file, batch_size, num_workers, transform, is_train=True, shuffle=True,
+                   distributed=False):
     acba = ACBA() if is_train else None
     dataset = ChestXrayDataset(data_dir, label_file, transform, acba)
-    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True)
+
+    if distributed:
+        sampler = torch.utils.data.distributed.DistributedSampler(dataset, shuffle=shuffle)
+        shuffle = False  # DistributedSampler handles shuffling
+    else:
+        sampler = None
+
+    return DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True,
+                      sampler=sampler)
 

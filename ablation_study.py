@@ -14,6 +14,7 @@ from utils.metrics import calculate_metrics
 from train import train_classifiers
 from torch.multiprocessing import spawn
 
+
 def run_ablation_study(config):
     world_size = torch.cuda.device_count()
 
@@ -35,7 +36,6 @@ def run_ablation_study(config):
 
     # Compare results
     compare_metrics(metrics_a, metrics_b, config['model']['disease_names'])
-
 
 
 def evaluate_model(config, model_path, use_correlation):

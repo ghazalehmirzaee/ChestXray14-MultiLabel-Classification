@@ -173,10 +173,13 @@ def train_classifiers(rank, world_size, config, use_correlation=True):
     criterion = FWCELoss(class_frequencies=get_class_frequencies(config['data']['train_labels']))
 
     train_transform = get_transform(is_train=True)
+
     train_loader = get_dataloader(config['data']['train_dir'], config['data']['train_labels'],
                                   config['training']['batch_size'], config['training']['num_workers'],
                                   train_transform, is_train=True, distributed=True)
+
     val_transform = get_transform(is_train=False)
+
     val_loader = get_dataloader(config['data']['val_dir'], config['data']['val_labels'],
                                 config['training']['batch_size'], config['training']['num_workers'],
                                 val_transform, is_train=False, shuffle=False, distributed=True)

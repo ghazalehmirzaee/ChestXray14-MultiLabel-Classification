@@ -18,12 +18,12 @@ def load_config(config_path):
 
     return config
 
-
-from ablation_study import run_ablation_study
-
 def main(args):
     config = load_config(args.config)
 
+    if args.mode == "ablation":
+        print("Running ablation study...")
+        run_ablation_study(config)
     if args.mode == "train_simclr":
         print("Starting SimCLR pre-training...")
         world_size = torch.cuda.device_count()
@@ -44,6 +44,7 @@ def main(args):
         run_ablation_study(config)
     else:
         print("Invalid mode: {}".format(args.mode))
+
 
 
 if __name__ == "__main__":
