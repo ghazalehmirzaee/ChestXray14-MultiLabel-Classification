@@ -33,7 +33,6 @@ def evaluate_model(config):
     correlation_module.to(device)
     meta_learner.to(device)
 
-    # Prepare data
     test_transform = get_transform(is_train=False)
     test_loader = get_dataloader(config['data']['test_dir'], config['data']['test_labels'],
                                  config['training']['batch_size'], config['training']['num_workers'], test_transform,
@@ -64,10 +63,8 @@ def evaluate_model(config):
     all_predictions = np.concatenate(all_predictions)
     all_labels = np.concatenate(all_labels)
 
-    # Calculate metrics
     metrics = calculate_metrics(all_labels, (all_predictions > 0.5).astype(int), all_predictions)
 
-    # Print results
     print("Overall Metrics:")
     print("Micro F1: {:.4f}".format(metrics['micro_f1']))
     print("Macro F1: {:.4f}".format(metrics['macro_f1']))

@@ -22,7 +22,6 @@ def generate_gradcam(model, input_tensor, target_class):
         nonlocal conv_output
         conv_output = output
 
-    # Register hook
     last_conv_layer = list(model.backbone.children())[-1]
     handle = last_conv_layer.register_forward_hook(save_output)
 

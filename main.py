@@ -11,7 +11,6 @@ def load_config(config_path):
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
 
-    # Convert relevant string values to float
     config['training']['lr'] = float(config['training']['lr'])
     config['training']['weight_decay'] = float(config['training']['weight_decay'])
     config['training']['simclr_temperature'] = float(config['training']['simclr_temperature'])
