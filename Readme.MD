@@ -47,11 +47,16 @@ project/
 
 1. Clone this repository:
 
+```bash
 git clone https://github.com/ghazalehmirzaee/ChestXray14-MultiLabel-Classification.git
-cd chest-xray-classification
+cd ChestXray14-MultiLabel-Classification
+```
 
 2. Install the required packages:
+
+```bash
 pip install -r requirements.txt
+```
 
 3. Set up the dataset in the appropriate directory and update the `config.yaml` file with the correct paths.
 
@@ -60,8 +65,9 @@ pip install -r requirements.txt
 ### Training
 
 To run the full training pipeline (SimCLR pretraining + classifier training):
-
+```bash
 python main.py --config config/config.yaml --mode train
+```
 
 ### Evaluation
 
