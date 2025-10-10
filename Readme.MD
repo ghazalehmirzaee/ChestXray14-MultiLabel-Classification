@@ -72,13 +72,16 @@ python main.py --config config/config.yaml --mode train
 ### Evaluation
 
 To evaluate a trained model:
+```bash
 python main.py --config config/config.yaml --mode evaluate
+```
 
 ### Ablation Study
 
 To run the ablation study comparing models with and without correlation learning:
+```bash
 python main.py --config config/config.yaml --mode ablation
-
+```
 ## Configuration
 
 Adjust the `config/config.yaml` file to modify hyperparameters, data paths, and other settings. Key configurations include:
