@@ -12,7 +12,6 @@ This project implements a multi-label classification system for chest X-rays, fo
 - Adaptive Class Balance Augmentation (ACBA) for handling class imbalance
 - Focal Weighted Cross-Entropy Loss for imbalanced learning
 - Distributed training support for multi-GPU setups
-- Comprehensive ablation study framework
 
 ```bash
 ## Project Structure
