@@ -89,15 +89,6 @@ Adjust the `config/config.yaml` file to modify hyperparameters, data paths, and 
 - `training`: Training hyperparameters
 - `wandb`: Weights & Biases logging settings
 
-## Results
-
-The project includes comprehensive logging and visualization using Weights & Biases. Key metrics tracked include:
-
-- Training and validation loss
-- AUC-ROC scores
-- Mean Average Precision
-- F1 scores
-- Learning rate schedules
 
 Detailed ablation study results comparing models with and without correlation learning are also provided.
 
